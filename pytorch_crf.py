@@ -20,18 +20,15 @@ import torch
 import torch.nn as nn
 
 
-class CRF(nn.Module):
+class CRF(torch.nn.Module):
     """Conditional random field.
-
     This module implements a conditional random field [LMP01]_. The forward computation
     of this class computes the log likelihood of the given sequence of tags and
     emission score tensor. This class also has `~CRF.decode` method which finds
     the best tag sequence given an emission score tensor using `Viterbi algorithm`_.
-
     Args:
         num_tags: Number of tags.
         batch_first: Whether the first dimension corresponds to the size of a minibatch.
-
     Attributes:
         start_transitions (`~torch.nn.Parameter`): Start transition score tensor of size
             ``(num_tags,)``.
@@ -39,13 +36,10 @@ class CRF(nn.Module):
             ``(num_tags,)``.
         transitions (`~torch.nn.Parameter`): Transition score tensor of size
             ``(num_tags, num_tags)``.
-
-
     .. [LMP01] Lafferty, J., McCallum, A., Pereira, F. (2001).
        "Conditional random fields: Probabilistic models for segmenting and
        labeling sequence data". *Proc. 18th International Conf. on Machine
        Learning*. Morgan Kaufmann. pp. 282–289.
-
     .. _Viterbi algorithm: https://en.wikipedia.org/wiki/Viterbi_algorithm
     """
 
@@ -55,21 +49,20 @@ class CRF(nn.Module):
         super().__init__()
         self.num_tags = num_tags
         self.batch_first = batch_first
-        self.start_transitions = nn.Parameter(torch.empty(num_tags))
-        self.end_transitions = nn.Parameter(torch.empty(num_tags))
-        self.transitions = nn.Parameter(torch.empty(num_tags, num_tags))
+        self.start_transitions = torch.nn.Parameter(torch.empty(num_tags))
+        self.end_transitions = torch.nn.Parameter(torch.empty(num_tags))
+        self.transitions = torch.nn.Parameter(torch.empty(num_tags, num_tags))
 
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
         """Initialize the transition parameters.
-
         The parameters will be initialized randomly from a uniform distribution
         between -0.1 and 0.1.
         """
-        nn.init.uniform_(self.start_transitions, -0.1, 0.1)
-        nn.init.uniform_(self.end_transitions, -0.1, 0.1)
-        nn.init.uniform_(self.transitions, -0.1, 0.1)
+        torch.nn.init.uniform_(self.start_transitions, -0.1, 0.1)
+        torch.nn.init.uniform_(self.end_transitions, -0.1, 0.1)
+        torch.nn.init.uniform_(self.transitions, -0.1, 0.1)
 
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}(num_tags={self.num_tags})'
@@ -79,7 +72,6 @@ class CRF(nn.Module):
                 mask: Optional[torch.ByteTensor] = None,
                 reduction: str = 'sum') -> torch.Tensor:
         """Compute the conditional log likelihood of a sequence of tags given emission scores.
-
         Args:
             emissions (`~torch.Tensor`): Emission score tensor of size
                 ``(seq_length, batch_size, num_tags)`` if ``batch_first`` is ``False``,
@@ -93,7 +85,6 @@ class CRF(nn.Module):
                 ``none|sum|mean|token_mean``. ``none``: no reduction will be applied.
                 ``sum``: the output will be summed over batches. ``mean``: the output will be
                 averaged over batches. ``token_mean``: the output will be averaged over tokens.
-
         Returns:
             `~torch.Tensor`: The log likelihood. This will have size ``(batch_size,)`` if
             reduction is ``none``, ``()`` otherwise.
@@ -103,6 +94,9 @@ class CRF(nn.Module):
             raise ValueError(f'invalid reduction: {reduction}')
         if mask is None:
             mask = torch.ones_like(tags, dtype=torch.uint8)
+
+        if mask.dtype != torch.uint8:
+            mask = mask.byte()
 
         if self.batch_first:
             emissions = emissions.transpose(0, 1)
@@ -129,7 +123,6 @@ class CRF(nn.Module):
                nbest: Optional[int] = None,
                pad_tag: Optional[int] = None) -> Union[List[List[int]], List[List[List[int]]]]:
         """Find the most likely tag sequence using Viterbi algorithm.
-
         Args:
             emissions (`~torch.Tensor`): Emission score tensor of size
                 ``(seq_length, batch_size, num_tags)`` if ``batch_first`` is ``False``,
@@ -140,7 +133,6 @@ class CRF(nn.Module):
             pad_tag (`int`): Tag at padded positions. Often input varies in length and
                 the length will be padded to the maximum length in the batch. Tags at
                 the padded positions will be assigned with a padding tag, i.e. `pad_tag`
-
         Returns:
             List of list containing the best tag sequence for each batch.
         """
@@ -149,6 +141,9 @@ class CRF(nn.Module):
         self._validate(emissions, mask=mask)
         if mask is None:
             mask = emissions.new_ones(emissions.shape[:2], dtype=torch.uint8)
+
+        if mask.dtype != torch.uint8:
+            mask = mask.byte()
 
         if self.batch_first:
             emissions = emissions.transpose(0, 1)
@@ -268,16 +263,20 @@ class CRF(nn.Module):
                         pad_tag: Optional[int] = None) -> List[List[int]]:
         # emissions: (seq_length, batch_size, num_tags)
         # mask: (seq_length, batch_size)
+        # return: (batch_size, seq_length)
         if pad_tag is None:
             pad_tag = -1
 
+        device = emissions.device
         seq_length, batch_size = mask.shape
 
         # Start transition and first emission
         # shape: (batch_size, num_tags)
         score = self.start_transitions + emissions[0]
-        history_idx = torch.empty(seq_length, batch_size, self.num_tags, dtype=torch.long)
-        oor_idx = torch.full((batch_size, self.num_tags), pad_tag, dtype=torch.long)
+        history_idx = torch.empty(seq_length, batch_size, self.num_tags,
+                                  dtype=torch.long, device=device)
+        oor_idx = torch.full((batch_size, self.num_tags), pad_tag,
+                             dtype=torch.long, device=device)
 
         # - score is a tensor of size (batch_size, num_tags) where for every batch,
         #   value at column j stores the score of the best tag sequence so far that ends
@@ -330,8 +329,9 @@ class CRF(nn.Module):
         history_idx = history_idx.transpose(1, 0).contiguous()
 
         # The most probable path for each sequence
-        best_tags_arr = torch.full((seq_length, batch_size), pad_tag, dtype=torch.long)
-        best_tags = torch.zeros(batch_size, 1, dtype=torch.long)
+        best_tags_arr = torch.full((seq_length, batch_size), pad_tag,
+                                   dtype=torch.long, device=device)
+        best_tags = torch.zeros(batch_size, 1, dtype=torch.long, device=device)
         for idx in range(seq_length - 1, -1, -1):
             best_tags = torch.gather(history_idx[idx], 1, best_tags)
             best_tags_arr[idx] = best_tags.data.view(batch_size)
@@ -344,16 +344,20 @@ class CRF(nn.Module):
                               pad_tag: Optional[int] = None) -> List[List[List[int]]]:
         # emissions: (seq_length, batch_size, num_tags)
         # mask: (seq_length, batch_size)
+        # return: (batch_size, nbest, seq_length)
         if pad_tag is None:
             pad_tag = -1
 
+        device = emissions.device
         seq_length, batch_size = mask.shape
 
         # Start transition and first emission
         # shape: (batch_size, num_tags)
         score = self.start_transitions + emissions[0]
-        history_idx = torch.empty(seq_length, batch_size, self.num_tags, nbest, dtype=torch.long)
-        oor_idx = torch.full((batch_size, self.num_tags, nbest), pad_tag, dtype=torch.long)
+        history_idx = torch.empty(seq_length, batch_size, self.num_tags, nbest,
+                                  dtype=torch.long, device=device)
+        oor_idx = torch.full((batch_size, self.num_tags, nbest), pad_tag,
+                             dtype=torch.long, device=device)
 
         # + score is a tensor of size (batch_size, num_tags) where for every batch,
         #   value at column j stores the score of the best tag sequence so far that ends
@@ -410,10 +414,12 @@ class CRF(nn.Module):
         history_idx = history_idx.transpose(1, 0).contiguous()
 
         # The most probable path for each sequence
-        best_tags_arr = torch.full((seq_length, batch_size, nbest), pad_tag, dtype=torch.long)
-        best_tags = torch.arange(nbest, dtype=torch.long).view(1, -1).expand(batch_size, -1)
+        best_tags_arr = torch.full((seq_length, batch_size, nbest), pad_tag,
+                                   dtype=torch.long, device=device)
+        best_tags = torch.arange(nbest, dtype=torch.long, device=device) \
+                         .view(1, -1).expand(batch_size, -1)
         for idx in range(seq_length - 1, -1, -1):
             best_tags = torch.gather(history_idx[idx].view(batch_size, -1), 1, best_tags)
             best_tags_arr[idx] = best_tags.data.view(batch_size, -1) // nbest
 
-        return best_tags_arr.transpose(0, 1)
+        return best_tags_arr.permute(1, 2, 0)
