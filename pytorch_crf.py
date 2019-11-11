@@ -17,7 +17,6 @@ with only the following difference
 from typing import List, Optional, Union
 
 import torch
-import torch.nn as nn
 
 
 class CRF(torch.nn.Module):
