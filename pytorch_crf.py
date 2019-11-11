@@ -15,7 +15,6 @@ with only the following difference
   of the method `_viterbi_decode_nbest`
 """
 from typing import List, Optional, Union
-
 import torch
 
 
