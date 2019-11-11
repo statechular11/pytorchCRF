@@ -23,12 +23,17 @@ pip install pytorchcrf
 ```python
 >>> import torch
 >>> from pytorchcrf import CRF
->>> num_tags = 4  # number of tags is 4
+>>> num_tags = 5                        # number of tags is 5
 >>> model = CRF(num_tags)
->>> seq_length = 3  # maximum sequence length in a batch
->>> batch_size = 2  # number of samples in the batch
+>>> seq_length = 3                      # maximum sequence length in a batch
+>>> batch_size = 2                      # number of samples in the batch
 >>> emissions = torch.randn(seq_length, batch_size, num_tags)
 
->>> model.decode(emissions)
->>> model.decode(emissions, nbest=3)
+# Computing log likelihood
+>>> tags = torch.tensor([[2, 3], [1, 0], [3, 4]], dtype=torch.long)  # (seq_length, batch_size)
+>>> model(emissions, tags)
+
+# Decoding
+>>> model.decode(emissions)             # decoding the best path
+>>> model.decode(emissions, nbest=3)    # decoding the top 3 paths
 ```

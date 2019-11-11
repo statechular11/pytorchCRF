@@ -1,0 +1,8 @@
+README.md
+setup.py
+pytorchcrf/__init__.py
+pytorchcrf/pytorch_crf.py
+pytorchcrf.egg-info/PKG-INFO
+pytorchcrf.egg-info/SOURCES.txt
+pytorchcrf.egg-info/dependency_links.txt
+pytorchcrf.egg-info/top_level.txt

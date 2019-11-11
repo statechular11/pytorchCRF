@@ -7,10 +7,11 @@ with open(os.path.join(ROOT_DIR, 'README.md')) as file:
 
 setup(
     name='pytorchcrf',
-    version='0.1',
+    version='0.1.0',
     description='PyTorch CRF with N-best decoding',
     long_description=readme,
-    url='https://github.com/statech/pytorch-crf',
+    long_description_content_type="text/markdown",
+    url='https://github.com/statech/pytorchCRF',
     author='Feiyang Niu',
     author_email='statech.forums@gmail.com',
     license='MIT',
