@@ -1,4 +1,4 @@
-# PyTorch CRF
+# PyTorch CRF with N-best Decoding
 
 Implementation of Conditional Random Fields (CRF) in PyTorch 1.0. It supports top-N most probable paths decoding.
 
@@ -12,11 +12,17 @@ The package is based on [pytorch-crf](https://github.com/kmkurn/pytorch-crf) wit
 - Python 3 (>= 3.6)
 - PyTorch 1.0
 
+## Installation
+
+```bash
+pip install pytorchcrf
+```
+
 ## Examples
 
 ```python
 >>> import torch
->>> from pytorch_crf import CRF
+>>> from pytorchcrf import CRF
 >>> num_tags = 4  # number of tags is 4
 >>> model = CRF(num_tags)
 >>> seq_length = 3  # maximum sequence length in a batch
