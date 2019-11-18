@@ -11,15 +11,6 @@
 	},
 	"buffers":
 	[
-		{
-			"file": "README.md",
-			"settings":
-			{
-				"buffer_size": 149,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		}
 	],
 	"build_system": "Packages/Python/Python.sublime-build",
 	"build_system_choices":
@@ -102,10 +93,12 @@
 	},
 	"expanded_folders":
 	[
-		"/home/fniu/Documents/projects/pytorch-crf"
+		"/home/fniu/Documents/projects/pytorchCRF"
 	],
 	"file_history":
 	[
+		"/home/fniu/Documents/projects/pytorchCRF/pytorchCRF.sublime-project",
+		"/home/fniu/Documents/projects/pytorchCRF/README.md",
 		"/home/fniu/Documents/projects/pytorch-crf/pytorch-crf.sublime-project",
 		"/home/fniu/.config/sublime-text-3/Packages/User/Anaconda.sublime-settings",
 		"/home/fniu/Documents/projects/dstc8/utils/data.py",
@@ -152,88 +145,8 @@
 	"groups":
 	[
 		{
-			"selected": 0,
 			"sheets":
 			[
-				{
-					"buffer": 0,
-					"file": "README.md",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 149,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								149,
-								149
-							]
-						],
-						"settings":
-						{
-							"SL.13.region_keys":
-							[
-							],
-							"c_time":
-							[
-								128,
-								3,
-								99,
-								100,
-								97,
-								116,
-								101,
-								116,
-								105,
-								109,
-								101,
-								10,
-								100,
-								97,
-								116,
-								101,
-								116,
-								105,
-								109,
-								101,
-								10,
-								113,
-								0,
-								67,
-								10,
-								7,
-								227,
-								11,
-								9,
-								19,
-								35,
-								55,
-								6,
-								185,
-								132,
-								113,
-								1,
-								133,
-								113,
-								2,
-								82,
-								113,
-								3,
-								46
-							],
-							"markdonw_live_preview_last_run": 1573356988.96,
-							"syntax": "Packages/Text/Plain text.tmLanguage"
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 0,
-					"type": "text"
-				}
 			]
 		}
 	],
@@ -281,7 +194,7 @@
 		"height": 0.0
 	},
 	"pinned_build_system": "Anaconda Python DSTC8 Builder",
-	"project": "pytorch-crf.sublime-project",
+	"project": "pytorchCRF.sublime-project",
 	"replace":
 	{
 		"height": 62.0
@@ -322,7 +235,7 @@
 	"show_open_files": false,
 	"show_tabs": true,
 	"side_bar_visible": true,
-	"side_bar_width": 173.0,
+	"side_bar_width": 278.0,
 	"status_bar_visible": true,
 	"template_settings":
 	{
