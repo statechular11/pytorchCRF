@@ -10,7 +10,7 @@ The package is based on [pytorch-crf](https://github.com/kmkurn/pytorch-crf) wit
 ## Requirements
 
 - Python 3 (>= 3.6)
-- PyTorch 1.0
+- PyTorch (>= 1.0)
 
 ## Installation
 

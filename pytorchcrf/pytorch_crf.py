@@ -87,14 +87,13 @@ class CRF(torch.nn.Module):
             `~torch.Tensor`: The log likelihood. This will have size ``(batch_size,)`` if
             reduction is ``none``, ``()`` otherwise.
         """
-        self._validate(emissions, tags=tags, mask=mask)
         if reduction not in ('none', 'sum', 'mean', 'token_mean'):
             raise ValueError(f'invalid reduction: {reduction}')
         if mask is None:
-            mask = torch.ones_like(tags, dtype=torch.uint8)
-
+            mask = torch.ones_like(tags, dtype=torch.uint8, device=tags.device)
         if mask.dtype != torch.uint8:
             mask = mask.byte()
+        self._validate(emissions, tags=tags, mask=mask)
 
         if self.batch_first:
             emissions = emissions.transpose(0, 1)
@@ -136,19 +135,19 @@ class CRF(torch.nn.Module):
         """
         if nbest is None:
             nbest = 1
-        self._validate(emissions, mask=mask)
         if mask is None:
-            mask = emissions.new_ones(emissions.shape[:2], dtype=torch.uint8)
-
+            mask = torch.ones(emissions.shape[:2], dtype=torch.uint8,
+                              device=emissions.device)
         if mask.dtype != torch.uint8:
             mask = mask.byte()
+        self._validate(emissions, mask=mask)
 
         if self.batch_first:
             emissions = emissions.transpose(0, 1)
             mask = mask.transpose(0, 1)
 
         if nbest == 1:
-            return self._viterbi_decode(emissions, mask)
+            return self._viterbi_decode(emissions, mask, pad_tag)
         return self._viterbi_decode_nbest(emissions, mask, nbest, pad_tag)
 
     def _validate(self, emissions: torch.Tensor,
@@ -263,7 +262,7 @@ class CRF(torch.nn.Module):
         # mask: (seq_length, batch_size)
         # return: (batch_size, seq_length)
         if pad_tag is None:
-            pad_tag = -1
+            pad_tag = 0
 
         device = emissions.device
         seq_length, batch_size = mask.shape
@@ -271,9 +270,11 @@ class CRF(torch.nn.Module):
         # Start transition and first emission
         # shape: (batch_size, num_tags)
         score = self.start_transitions + emissions[0]
-        history_idx = torch.empty(seq_length, batch_size, self.num_tags,
+        history_idx = torch.zeros((seq_length, batch_size, self.num_tags),
                                   dtype=torch.long, device=device)
-        oor_idx = torch.full((batch_size, self.num_tags), pad_tag,
+        oor_idx = torch.zeros((batch_size, self.num_tags),
+                              dtype=torch.long, device=device)
+        oor_tag = torch.full((seq_length, batch_size), pad_tag,
                              dtype=torch.long, device=device)
 
         # - score is a tensor of size (batch_size, num_tags) where for every batch,
@@ -327,14 +328,14 @@ class CRF(torch.nn.Module):
         history_idx = history_idx.transpose(1, 0).contiguous()
 
         # The most probable path for each sequence
-        best_tags_arr = torch.full((seq_length, batch_size), pad_tag,
-                                   dtype=torch.long, device=device)
+        best_tags_arr = torch.zeros((seq_length, batch_size),
+                                    dtype=torch.long, device=device)
         best_tags = torch.zeros(batch_size, 1, dtype=torch.long, device=device)
         for idx in range(seq_length - 1, -1, -1):
             best_tags = torch.gather(history_idx[idx], 1, best_tags)
             best_tags_arr[idx] = best_tags.data.view(batch_size)
 
-        return best_tags_arr.transpose(0, 1)
+        return torch.where(mask, best_tags_arr, oor_tag).transpose(0, 1)
 
     def _viterbi_decode_nbest(self, emissions: torch.FloatTensor,
                               mask: torch.ByteTensor,
@@ -344,7 +345,7 @@ class CRF(torch.nn.Module):
         # mask: (seq_length, batch_size)
         # return: (batch_size, nbest, seq_length)
         if pad_tag is None:
-            pad_tag = -1
+            pad_tag = 0
 
         device = emissions.device
         seq_length, batch_size = mask.shape
@@ -352,9 +353,11 @@ class CRF(torch.nn.Module):
         # Start transition and first emission
         # shape: (batch_size, num_tags)
         score = self.start_transitions + emissions[0]
-        history_idx = torch.empty(seq_length, batch_size, self.num_tags, nbest,
+        history_idx = torch.zeros((seq_length, batch_size, self.num_tags, nbest),
                                   dtype=torch.long, device=device)
-        oor_idx = torch.full((batch_size, self.num_tags, nbest), pad_tag,
+        oor_idx = torch.zeros((batch_size, self.num_tags, nbest),
+                              dtype=torch.long, device=device)
+        oor_tag = torch.full((seq_length, batch_size, nbest), pad_tag,
                              dtype=torch.long, device=device)
 
         # + score is a tensor of size (batch_size, num_tags) where for every batch,
@@ -412,12 +415,12 @@ class CRF(torch.nn.Module):
         history_idx = history_idx.transpose(1, 0).contiguous()
 
         # The most probable path for each sequence
-        best_tags_arr = torch.full((seq_length, batch_size, nbest), pad_tag,
-                                   dtype=torch.long, device=device)
+        best_tags_arr = torch.zeros((seq_length, batch_size, nbest),
+                                    dtype=torch.long, device=device)
         best_tags = torch.arange(nbest, dtype=torch.long, device=device) \
                          .view(1, -1).expand(batch_size, -1)
         for idx in range(seq_length - 1, -1, -1):
             best_tags = torch.gather(history_idx[idx].view(batch_size, -1), 1, best_tags)
             best_tags_arr[idx] = best_tags.data.view(batch_size, -1) // nbest
 
-        return best_tags_arr.permute(1, 2, 0)
+        return torch.where(mask.unsqueeze(-1), best_tags_arr, oor_tag).permute(1, 2, 0)
