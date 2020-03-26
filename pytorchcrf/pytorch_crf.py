@@ -14,7 +14,7 @@ with only the following difference
 + The class now supports decoding top-N most probable paths through the implementation
   of the method `_viterbi_decode_nbest`
 """
-from typing import List, Optional, Union
+from typing import List, Optional
 import torch
 
 
@@ -118,7 +118,7 @@ class CRF(torch.nn.Module):
     def decode(self, emissions: torch.Tensor,
                mask: Optional[torch.ByteTensor] = None,
                nbest: Optional[int] = None,
-               pad_tag: Optional[int] = None) -> Union[List[List[int]], List[List[List[int]]]]:
+               pad_tag: Optional[int] = None) -> List[List[List[int]]]:
         """Find the most likely tag sequence using Viterbi algorithm.
         Args:
             emissions (`~torch.Tensor`): Emission score tensor of size
@@ -131,7 +131,8 @@ class CRF(torch.nn.Module):
                 the length will be padded to the maximum length in the batch. Tags at
                 the padded positions will be assigned with a padding tag, i.e. `pad_tag`
         Returns:
-            List of list containing the best tag sequence for each batch.
+            A PyTorch tensor of the best tag sequence for each batch of shape
+            (nbest, batch_size, seq_length)
         """
         if nbest is None:
             nbest = 1
@@ -147,7 +148,7 @@ class CRF(torch.nn.Module):
             mask = mask.transpose(0, 1)
 
         if nbest == 1:
-            return self._viterbi_decode(emissions, mask, pad_tag)
+            return self._viterbi_decode(emissions, mask, pad_tag).unsqueeze(0)
         return self._viterbi_decode_nbest(emissions, mask, nbest, pad_tag)
 
     def _validate(self, emissions: torch.Tensor,
@@ -343,7 +344,7 @@ class CRF(torch.nn.Module):
                               pad_tag: Optional[int] = None) -> List[List[List[int]]]:
         # emissions: (seq_length, batch_size, num_tags)
         # mask: (seq_length, batch_size)
-        # return: (batch_size, nbest, seq_length)
+        # return: (nbest, batch_size, seq_length)
         if pad_tag is None:
             pad_tag = 0
 
@@ -423,4 +424,4 @@ class CRF(torch.nn.Module):
             best_tags = torch.gather(history_idx[idx].view(batch_size, -1), 1, best_tags)
             best_tags_arr[idx] = best_tags.data.view(batch_size, -1) // nbest
 
-        return torch.where(mask.unsqueeze(-1), best_tags_arr, oor_tag).permute(1, 2, 0)
+        return torch.where(mask.unsqueeze(-1), best_tags_arr, oor_tag).permute(2, 1, 0)

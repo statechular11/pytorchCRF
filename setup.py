@@ -23,7 +23,10 @@ setup(
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
     ],
-    keywords='pytorch crf nbest',
+    install_requires=[
+        'torch'
+    ],
+    keywords='pytorch crf n-best',
     packages=find_packages(),
     python_requires='>=3.6',
 )
